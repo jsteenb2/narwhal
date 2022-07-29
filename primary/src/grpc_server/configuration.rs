@@ -6,8 +6,8 @@ use multiaddr::Multiaddr;
 use std::collections::BTreeMap;
 use tonic::{Request, Response, Status};
 use types::{
-    Configuration, Empty, GetPrimaryAddressResponse, MultiAddrProto, NewEpochRequest,
-    NewNetworkInfoRequest, PrimaryAddressesProto, PublicKeyProto,
+    Configuration, Empty, NewEpochRequest, NewNetworkInfoRequest, PrimaryAddressesProto,
+    PublicKeyProto,
 };
 
 pub struct NarwhalConfiguration {
