@@ -171,7 +171,9 @@ impl Primary {
             .load()
             .primary(&name)
             .expect("Our public key or worker id is not in the committee")
-            .primary_to_primary;
+            .expect("Primary addresses have not been initialized.")
+            .primary_to_primary
+            .expect("Primary to primary address has not been initialized.");
         let address = address
             .replace(0, |_protocol| Some(Protocol::Ip4(Primary::INADDR_ANY)))
             .unwrap();
@@ -198,7 +200,9 @@ impl Primary {
             .load()
             .primary(&name)
             .expect("Our public key or worker id is not in the committee")
-            .worker_to_primary;
+            .expect("Primary addresses have not been initialized.")
+            .worker_to_primary
+            .expect("Worker to primary address has not been initialized.");
         let address = address
             .replace(0, |_protocol| Some(Protocol::Ip4(Primary::INADDR_ANY)))
             .unwrap();
@@ -436,7 +440,9 @@ impl Primary {
                 .load()
                 .primary(&name)
                 .expect("Our public key or worker id is not in the committee")
+                .expect("Primary addresses have not been initialized.")
                 .primary_to_primary
+                .expect("Primary to primary address has not been initialized.")
         );
 
         let mut handles = vec![

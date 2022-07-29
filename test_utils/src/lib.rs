@@ -114,14 +114,18 @@ pub fn committee_from_keys(keys: &[KeyPair]) -> Committee {
 }
 
 pub fn make_authority_with_port_getter<F: FnMut() -> u16>(mut get_port: F) -> Authority {
-    let primary = PrimaryAddresses {
-        primary_to_primary: format!("/ip4/127.0.0.1/tcp/{}/http", get_port())
-            .parse()
-            .unwrap(),
-        worker_to_primary: format!("/ip4/127.0.0.1/tcp/{}/http", get_port())
-            .parse()
-            .unwrap(),
-    };
+    let primary = Some(PrimaryAddresses {
+        primary_to_primary: Some(
+            format!("/ip4/127.0.0.1/tcp/{}/http", get_port())
+                .parse()
+                .unwrap(),
+        ),
+        worker_to_primary: Some(
+            format!("/ip4/127.0.0.1/tcp/{}/http", get_port())
+                .parse()
+                .unwrap(),
+        ),
+    });
     let workers = vec![
         (
             0,
@@ -220,10 +224,10 @@ pub fn mock_committee(keys: &[PublicKey]) -> Committee {
                     id.clone(),
                     Authority {
                         stake: 1,
-                        primary: PrimaryAddresses {
-                            primary_to_primary: "/ip4/0.0.0.0/tcp/0/http".parse().unwrap(),
-                            worker_to_primary: "/ip4/0.0.0.0/tcp/0/http".parse().unwrap(),
-                        },
+                        primary: Some(PrimaryAddresses {
+                            primary_to_primary: Some("/ip4/0.0.0.0/tcp/0/http".parse().unwrap()),
+                            worker_to_primary: Some("/ip4/0.0.0.0/tcp/0/http".parse().unwrap()),
+                        }),
                         workers: HashMap::default(),
                     },
                 )
@@ -687,7 +691,7 @@ fn this_cert_parents(
 }
 
 // Utility for making several rounds worth of certificates through iterated parenthood sampling.
-// The making of individial certificates once parents are figured out is delegated to the `make_one_certificate` argument
+// The making of individual certificates once parents are figured out is delegated to the `make_one_certificate` argument
 fn rounds_of_certificates(
     range: RangeInclusive<Round>,
     initial_parents: &BTreeSet<CertificateDigest>,

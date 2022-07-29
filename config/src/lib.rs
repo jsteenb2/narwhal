@@ -294,9 +294,9 @@ impl Parameters {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PrimaryAddresses {
     /// Address to receive messages from other primaries (WAN).
-    pub primary_to_primary: Multiaddr,
+    pub primary_to_primary: Option<Multiaddr>,
     /// Address to receive messages from our workers (LAN).
-    pub worker_to_primary: Multiaddr,
+    pub worker_to_primary: Option<Multiaddr>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Eq, Hash, PartialEq, Debug)]
@@ -314,7 +314,7 @@ pub struct Authority {
     /// The voting power of this authority.
     pub stake: Stake,
     /// The network addresses of the primary.
-    pub primary: PrimaryAddresses,
+    pub primary: Option<PrimaryAddresses>,
     /// Map of workers' id and their network addresses.
     pub workers: HashMap<WorkerId, WorkerInfo>,
 }
@@ -385,7 +385,7 @@ impl Committee {
     }
 
     /// Returns the primary addresses of the target primary.
-    pub fn primary(&self, to: &PublicKey) -> Result<PrimaryAddresses, ConfigError> {
+    pub fn primary(&self, to: &PublicKey) -> Result<Option<PrimaryAddresses>, ConfigError> {
         self.authorities
             .get(&to.clone())
             .map(|x| x.primary.clone())
@@ -393,7 +393,10 @@ impl Committee {
     }
 
     /// Returns the addresses of all primaries except `myself`.
-    pub fn others_primaries(&self, myself: &PublicKey) -> Vec<(PublicKey, PrimaryAddresses)> {
+    pub fn others_primaries(
+        &self,
+        myself: &PublicKey,
+    ) -> Vec<(PublicKey, Option<PrimaryAddresses>)> {
         self.authorities
             .iter()
             .filter(|(name, _)| *name != myself)
@@ -494,7 +497,7 @@ impl Committee {
     /// will generate no update and return a vector of errors.
     pub fn update_primary_network_info(
         &mut self,
-        mut new_info: BTreeMap<PublicKey, (Stake, PrimaryAddresses)>,
+        mut new_info: BTreeMap<PublicKey, (Stake, Option<PrimaryAddresses>)>,
     ) -> Result<(), Vec<CommitteeUpdateError>> {
         let mut errors = None;
 
