@@ -17,8 +17,8 @@ use std::{
     time::Duration,
 };
 use test_utils::{
-    committee, committee_from_keys, keys, make_optimal_certificates,
-    make_optimal_signed_certificates, temp_dir,
+    keys, make_optimal_certificates, make_optimal_signed_certificates, pure_committee_from_keys,
+    temp_dir, worker_cache_from_keys,
 };
 use tokio::sync::watch;
 use tonic::transport::Channel;
@@ -30,7 +30,11 @@ use types::{
 #[tokio::test]
 async fn test_rounds_errors() {
     // GIVEN keys
-    let keypair = keys(None).pop().unwrap();
+    let mut k = keys(None);
+
+    let committee = pure_committee_from_keys(&k);
+    let worker_cache = worker_cache_from_keys(&k);
+    let keypair = k.pop().unwrap();
     let name = keypair.public().clone();
 
     struct TestCase {
@@ -59,7 +63,6 @@ async fn test_rounds_errors() {
         },
     ];
 
-    let committee = committee(None);
     let parameters = Parameters {
         batch_size: 200, // Two transactions.
         ..Parameters::default()
@@ -94,6 +97,7 @@ async fn test_rounds_errors() {
         name.clone(),
         keypair,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
+        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
         parameters.clone(),
         store_primary.header_store,
         store_primary.certificate_store,
@@ -144,10 +148,14 @@ async fn test_rounds_errors() {
 #[tokio::test]
 async fn test_rounds_return_successful_response() {
     // GIVEN keys
-    let keypair = keys(None).pop().unwrap();
+    let mut k = keys(None);
+
+    let committee = pure_committee_from_keys(&k);
+    let worker_cache = worker_cache_from_keys(&k);
+
+    let keypair = k.pop().unwrap();
     let name = keypair.public().clone();
 
-    let committee = committee(None);
     let parameters = Parameters {
         batch_size: 200, // Two transactions.
         ..Parameters::default()
@@ -173,6 +181,7 @@ async fn test_rounds_return_successful_response() {
         name.clone(),
         keypair,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
+        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
         parameters.clone(),
         store_primary.header_store,
         store_primary.certificate_store,
@@ -232,7 +241,8 @@ async fn test_rounds_return_successful_response() {
 async fn test_node_read_causal_signed_certificates() {
     let mut k = keys(None);
 
-    let committee = committee_from_keys(&k);
+    let committee = pure_committee_from_keys(&k);
+    let worker_cache = worker_cache_from_keys(&k);
 
     // Make the data store.
     let primary_store_1 = NodeStorage::reopen(temp_dir());
@@ -321,6 +331,7 @@ async fn test_node_read_causal_signed_certificates() {
         name_1.clone(),
         keypair_1,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
+        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
         primary_1_parameters.clone(),
         primary_store_1.header_store.clone(),
         primary_store_1.certificate_store.clone(),
@@ -359,6 +370,7 @@ async fn test_node_read_causal_signed_certificates() {
         name_2.clone(),
         keypair_2,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
+        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
         primary_2_parameters.clone(),
         primary_store_2.header_store,
         primary_store_2.certificate_store,

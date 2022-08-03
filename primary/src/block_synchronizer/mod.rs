@@ -9,7 +9,7 @@ use crate::{
     primary::PrimaryMessage,
     utils, PayloadToken, CHANNEL_CAPACITY,
 };
-use config::{BlockSynchronizerParameters, Committee, WorkerId};
+use config::{BlockSynchronizerParameters, Committee, WorkerCache, WorkerId};
 use crypto::{Hash, PublicKey};
 use futures::{
     future::{join_all, BoxFuture},
@@ -156,6 +156,9 @@ pub struct BlockSynchronizer {
     /// The committee information.
     committee: Committee,
 
+    /// The worker information cache.
+    worker_cache: WorkerCache,
+
     /// Watch channel to reconfigure the committee.
     rx_reconfigure: watch::Receiver<ReconfigureNotification>,
 
@@ -204,6 +207,7 @@ impl BlockSynchronizer {
     pub fn spawn(
         name: PublicKey,
         committee: Committee,
+        worker_cache: WorkerCache,
         rx_reconfigure: watch::Receiver<ReconfigureNotification>,
         rx_commands: metered_channel::Receiver<Command>,
         rx_certificate_responses: metered_channel::Receiver<CertificatesResponse>,
@@ -217,6 +221,7 @@ impl BlockSynchronizer {
             Self {
                 name,
                 committee,
+                worker_cache,
                 rx_reconfigure,
                 rx_commands,
                 rx_certificate_responses,
@@ -494,6 +499,7 @@ impl BlockSynchronizer {
                 self.certificates_synchronize_timeout,
                 key,
                 self.committee.clone(),
+                self.worker_cache.clone(),
                 to_sync,
                 primaries,
                 receiver,
@@ -690,7 +696,7 @@ impl BlockSynchronizer {
 
         for (worker_id, batch_ids) in batches_by_worker {
             let worker_address = self
-                .committee
+                .worker_cache
                 .worker(&self.name, &worker_id)
                 .expect("Worker id not found")
                 .primary_to_worker;
@@ -788,6 +794,7 @@ impl BlockSynchronizer {
         fetch_certificates_timeout: Duration,
         request_id: RequestID,
         committee: Committee,
+        worker_cache: WorkerCache,
         block_ids: Vec<CertificateDigest>,
         primaries_sent_requests_to: Vec<PublicKey>,
         mut receiver: Receiver<CertificatesResponse>,
@@ -822,7 +829,7 @@ impl BlockSynchronizer {
 
                     num_of_responses += 1;
 
-                    match response.validate_certificates(&committee) {
+                    match response.validate_certificates(&committee, &worker_cache) {
                         Ok(certificates) => {
                             // Ensure we got responses for the certificates we asked for.
                             // Even if we have found one certificate that doesn't match

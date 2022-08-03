@@ -1,7 +1,7 @@
 // Copyright (c) 2022, Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 use crate::{utils, PayloadToken};
-use config::{Committee, WorkerId};
+use config::{Committee, WorkerCache, WorkerId};
 use consensus::dag::{Dag, ValidatorDagError};
 use crypto::{Digest, Hash, PublicKey};
 use futures::{
@@ -80,7 +80,7 @@ pub struct DeleteBatchMessage {
 /// # use std::env::temp_dir;
 /// # use crypto::Digest;
 /// # use crypto::ed25519::Ed25519PublicKey;
-/// # use config::Committee;
+/// # use config::{Committee, WorkerCache};
 /// # use consensus::dag::Dag;
 /// # use futures::future::join_all;
 /// # use std::collections::BTreeMap;
@@ -121,6 +121,7 @@ pub struct DeleteBatchMessage {
 ///
 ///     let name = Ed25519PublicKey::default();
 ///     let committee = Committee{ epoch: 0, authorities: BTreeMap::new() };
+///     let worker_cache = WorkerCache { epoch: 0, workers: BTreeMap::new() };
 ///     let (_tx_reconfigure, rx_reconfigure) = watch::channel(ReconfigureNotification::NewEpoch(committee.clone()));
 ///     let consensus_metrics = Arc::new(ConsensusMetrics::new(&Registry::new()));
 ///     // A dag with genesis for the committee
@@ -137,6 +138,7 @@ pub struct DeleteBatchMessage {
 ///     BlockRemover::spawn(
 ///         name,
 ///         committee,
+///         worker_cache,
 ///         certificate_store.clone(),
 ///         headers_store.clone(),
 ///         payload_store.clone(),
@@ -184,6 +186,9 @@ pub struct BlockRemover {
     /// The committee information.
     committee: Committee,
 
+    /// The worker information cache.
+    worker_cache: WorkerCache,
+
     /// Storage that keeps the Certificates by their digest id.
     certificate_store: Store<CertificateDigest, Certificate>,
 
@@ -228,6 +233,7 @@ impl BlockRemover {
     pub fn spawn(
         name: PublicKey,
         committee: Committee,
+        worker_cache: WorkerCache,
         certificate_store: Store<CertificateDigest, Certificate>,
         header_store: Store<HeaderDigest, Header>,
         payload_store: Store<(BatchDigest, WorkerId), PayloadToken>,
@@ -242,6 +248,7 @@ impl BlockRemover {
             Self {
                 name,
                 committee,
+                worker_cache,
                 certificate_store,
                 header_store,
                 payload_store,
@@ -540,7 +547,7 @@ impl BlockRemover {
         for (worker_id, batch_ids) in batches_by_worker {
             // send the batches to each worker id
             let worker_address = self
-                .committee
+                .worker_cache
                 .worker(&self.name, &worker_id)
                 .expect("Worker id not found")
                 .primary_to_worker;

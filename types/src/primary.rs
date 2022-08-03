@@ -7,7 +7,7 @@ use crate::{
 };
 use blake2::{digest::Update, VarBlake2b};
 use bytes::Bytes;
-use config::{Committee, Epoch, WorkerId, WorkerInfo};
+use config::{Committee, Epoch, WorkerCache, WorkerId, WorkerInfo};
 use crypto::{
     traits::{EncodeDecodeBase64, Signer, VerifyingKey},
     Digest, Hash, PublicKey, Signature, SignatureService, Verifier, DIGEST_LEN,
@@ -22,7 +22,6 @@ use std::{
     fmt,
     fmt::Formatter,
 };
-
 /// The round number.
 pub type Round = u64;
 
@@ -142,7 +141,7 @@ impl Header {
         }
     }
 
-    pub fn verify(&self, committee: &Committee) -> DagResult<()> {
+    pub fn verify(&self, committee: &Committee, worker_cache: &WorkerCache) -> DagResult<()> {
         // Ensure the header is from the correct epoch.
         ensure!(
             self.epoch == committee.epoch(),
@@ -164,7 +163,7 @@ impl Header {
 
         // Ensure all worker ids are correct.
         for worker_id in self.payload.values() {
-            committee
+            worker_cache
                 .worker(&self.author, worker_id)
                 .map_err(|_| DagError::MalformedHeader(self.id))?;
         }
@@ -363,6 +362,7 @@ pub struct Certificate {
 }
 
 impl Certificate {
+    // TODO: Check if I need to add workers here?
     pub fn genesis(committee: &Committee) -> Vec<Self> {
         committee
             .authorities
@@ -378,7 +378,7 @@ impl Certificate {
             .collect()
     }
 
-    pub fn verify(&self, committee: &Committee) -> DagResult<()> {
+    pub fn verify(&self, committee: &Committee, worker_cache: &WorkerCache) -> DagResult<()> {
         // Ensure the header is from the correct epoch.
         ensure!(
             self.epoch() == committee.epoch(),
@@ -394,7 +394,7 @@ impl Certificate {
         }
 
         // Check the embedded header.
-        self.header.verify(committee)?;
+        self.header.verify(committee, worker_cache)?;
 
         // Ensure the certificate has a quorum.
         let mut weight = 0;

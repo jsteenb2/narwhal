@@ -19,7 +19,7 @@ use crate::{
     PayloadAvailabilityResponse,
 };
 use async_trait::async_trait;
-use config::{Parameters, SharedCommittee, WorkerId, WorkerInfo};
+use config::{Parameters, SharedCommittee, SharedWorkerCache, WorkerId, WorkerInfo};
 use consensus::dag::Dag;
 use crypto::{
     traits::{EncodeDecodeBase64, Signer},
@@ -66,6 +66,7 @@ impl Primary {
         name: PublicKey,
         signer: Signatory,
         committee: SharedCommittee,
+        worker_cache: SharedWorkerCache,
         parameters: Parameters,
         header_store: Store<HeaderDigest, Header>,
         certificate_store: Store<CertificateDigest, Certificate>,
@@ -165,12 +166,12 @@ impl Primary {
 
         let (tx_consensus_round_updates, rx_consensus_round_updates) = watch::channel(0u64);
 
-        let our_workers = committee
+        let our_workers = worker_cache
             .load()
-            .authorities
-            .get(&name)
-            .expect("Our public key or worker id is not in the committee")
             .workers
+            .get(&name)
+            .expect("Our public key is not in the worker cache")
+            .0
             .clone();
 
         // Spawn the network receiver listening to messages from the other primaries.
@@ -247,6 +248,7 @@ impl Primary {
         let core_handle = Core::spawn(
             name.clone(),
             (**committee.load()).clone(),
+            (**worker_cache.load()).clone(),
             header_store.clone(),
             certificate_store.clone(),
             synchronizer,
@@ -288,6 +290,7 @@ impl Primary {
         let block_waiter_handle = BlockWaiter::spawn(
             name.clone(),
             (**committee.load()).clone(),
+            (**worker_cache.load()).clone(),
             tx_reconfigure.subscribe(),
             rx_get_block_commands,
             rx_batches,
@@ -306,6 +309,7 @@ impl Primary {
         let block_remover_handle = BlockRemover::spawn(
             name.clone(),
             (**committee.load()).clone(),
+            (**worker_cache.load()).clone(),
             certificate_store.clone(),
             header_store,
             payload_store.clone(),
@@ -326,6 +330,7 @@ impl Primary {
         let block_synchronizer_handle = BlockSynchronizer::spawn(
             name.clone(),
             (**committee.load()).clone(),
+            (**worker_cache.load()).clone(),
             tx_reconfigure.subscribe(),
             rx_block_synchronizer_commands,
             rx_certificate_responses,
@@ -350,6 +355,7 @@ impl Primary {
         let header_waiter_handle = HeaderWaiter::spawn(
             name.clone(),
             (**committee.load()).clone(),
+            (**worker_cache.load()).clone(),
             certificate_store.clone(),
             payload_store.clone(),
             tx_consensus_round_updates.subscribe(),
@@ -411,6 +417,7 @@ impl Primary {
         let state_handler_handle = StateHandler::spawn(
             name.clone(),
             committee.clone(),
+            worker_cache,
             rx_consensus,
             tx_consensus_round_updates,
             rx_state_handler,
