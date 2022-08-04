@@ -29,8 +29,6 @@ use std::{fs::File, io::Write};
 use tempfile::tempdir;
 use test_utils::make_authority_with_port_getter;
 
-// TODO if we want to keep workers.json should add test here?
-
 #[test]
 fn update_primary_network_info_test() {
     let committee = test_utils::committee(None);

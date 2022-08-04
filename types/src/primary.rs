@@ -362,7 +362,6 @@ pub struct Certificate {
 }
 
 impl Certificate {
-    // TODO: Check if I need to add workers here?
     pub fn genesis(committee: &Committee) -> Vec<Self> {
         committee
             .authorities
