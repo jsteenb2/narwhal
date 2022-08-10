@@ -294,9 +294,9 @@ impl Parameters {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PrimaryAddresses {
     /// Address to receive messages from other primaries (WAN).
-    pub primary_to_primary: Option<Multiaddr>,
+    pub primary_to_primary: Multiaddr,
     /// Address to receive messages from our workers (LAN).
-    pub worker_to_primary: Option<Multiaddr>,
+    pub worker_to_primary: Multiaddr,
 }
 
 #[derive(Clone, Serialize, Deserialize, Eq, Hash, PartialEq, Debug)]
@@ -456,31 +456,35 @@ impl Committee {
 
     /// Return all the network addresses in the committee.
     fn get_all_network_addresses(&self) -> HashSet<&Multiaddr> {
-        self.authorities
-            .values()
-            .flat_map(|authority| {
-                std::iter::once(&authority.primary.primary_to_primary)
-                    .chain(std::iter::once(&authority.primary.worker_to_primary))
-                    .chain(
-                        authority
-                            .workers
-                            .values()
-                            .map(|address| &address.transactions),
-                    )
-                    .chain(
-                        authority
-                            .workers
-                            .values()
-                            .map(|address| &address.worker_to_worker),
-                    )
-                    .chain(
-                        authority
-                            .workers
-                            .values()
-                            .map(|address| &address.primary_to_worker),
-                    )
-            })
-            .collect()
+        let mut network_addresses: HashSet<&Multiaddr> = HashSet::new();
+        for authority in self.authorities.values() {
+            if let Some(primary) = authority.primary.as_ref() {
+                network_addresses.insert(&primary.primary_to_primary);
+                network_addresses.insert(&primary.worker_to_primary);
+            }
+            network_addresses.extend(
+                &authority
+                    .workers
+                    .values()
+                    .map(|address| &address.transactions)
+                    .collect::<HashSet<&Multiaddr>>(),
+            );
+            network_addresses.extend(
+                &authority
+                    .workers
+                    .values()
+                    .map(|address| &address.worker_to_worker)
+                    .collect::<HashSet<&Multiaddr>>(),
+            );
+            network_addresses.extend(
+                &authority
+                    .workers
+                    .values()
+                    .map(|address| &address.primary_to_worker)
+                    .collect::<HashSet<&Multiaddr>>(),
+            );
+        }
+        network_addresses
     }
 
     /// Return the network addresses that are present in the current committee but that are absent

@@ -14,7 +14,7 @@ async fn test_new_epoch() {
     // start the cluster will all the possible nodes
     cluster.start(Some(2), Some(1), None).await;
 
-    // give some time for nodes to boostrap
+    // give some time for nodes to bootstrap
     tokio::time::sleep(Duration::from_secs(2)).await;
     let authority = cluster.authority(0);
     let name = authority.name.clone();
@@ -76,7 +76,7 @@ async fn test_new_network_info() {
     // start the cluster will all the possible nodes
     cluster.start(Some(2), Some(1), None).await;
 
-    // give some time for nodes to boostrap
+    // give some time for nodes to bootstrap
     tokio::time::sleep(Duration::from_secs(2)).await;
 
     let committee = cluster.committee_shared.clone();
@@ -160,7 +160,7 @@ async fn test_get_primary_address() {
     // start the cluster will all the possible nodes
     cluster.start(Some(2), Some(1), None).await;
 
-    // give some time for nodes to boostrap
+    // give some time for nodes to bootstrap
     tokio::time::sleep(Duration::from_secs(2)).await;
 
     let committee = cluster.committee_shared.clone();
@@ -183,7 +183,6 @@ async fn test_get_primary_address() {
             .unwrap()
             .unwrap()
             .primary_to_primary
-            .unwrap()
             .to_string()
     )
 }

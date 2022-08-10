@@ -163,7 +163,8 @@ impl Executor {
         let our_primary_to_primary_address = committee
             .load()
             .primary(&name)
-            .expect("Out public key is not in the committee!")
+            .expect("Our public key is not in the committee")
+            .expect("Primary addresses have not been initialized.")
             .primary_to_primary;
         // extract the hostname portion
         let our_primary_hostname = our_primary_to_primary_address

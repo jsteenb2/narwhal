@@ -43,16 +43,13 @@ fn get_registry() -> Result<Registry> {
             .map(|(i, kp)| {
                 let id = kp.public();
                 let primary = Some(PrimaryAddresses {
-                    primary_to_primary: Some(
-                        format!("/ip4/127.0.0.1/tcp/{}/http", 100 + i)
-                            .parse()
-                            .unwrap(),
-                    ),
-                    worker_to_primary: Some(
-                        format!("/ip4/127.0.0.1/tcp/{}/http", 200 + i)
-                            .parse()
-                            .unwrap(),
-                    ),
+                    primary_to_primary: format!("/ip4/127.0.0.1/tcp/{}/http", 100 + i)
+                        .parse()
+                        .unwrap(),
+
+                    worker_to_primary: format!("/ip4/127.0.0.1/tcp/{}/http", 200 + i)
+                        .parse()
+                        .unwrap(),
                 });
                 let workers = vec![(
                     0,
