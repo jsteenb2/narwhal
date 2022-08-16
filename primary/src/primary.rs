@@ -28,7 +28,7 @@ use crypto::{
 use multiaddr::{Multiaddr, Protocol};
 use network::{metrics::Metrics, PrimaryNetwork, PrimaryToWorkerNetwork};
 use prometheus::Registry;
-use std::{collections::HashMap, net::Ipv4Addr, sync::Arc};
+use std::{collections::BTreeMap, net::Ipv4Addr, sync::Arc};
 use store::Store;
 use tokio::{sync::watch, task::JoinHandle};
 use tonic::{Request, Response, Status};
@@ -248,7 +248,7 @@ impl Primary {
         let core_handle = Core::spawn(
             name.clone(),
             (**committee.load()).clone(),
-            (**worker_cache.load()).clone(),
+            worker_cache.clone(),
             header_store.clone(),
             certificate_store.clone(),
             synchronizer,
@@ -290,7 +290,7 @@ impl Primary {
         let block_waiter_handle = BlockWaiter::spawn(
             name.clone(),
             (**committee.load()).clone(),
-            (**worker_cache.load()).clone(),
+            worker_cache.clone(),
             tx_reconfigure.subscribe(),
             rx_get_block_commands,
             rx_batches,
@@ -309,7 +309,7 @@ impl Primary {
         let block_remover_handle = BlockRemover::spawn(
             name.clone(),
             (**committee.load()).clone(),
-            (**worker_cache.load()).clone(),
+            worker_cache.clone(),
             certificate_store.clone(),
             header_store,
             payload_store.clone(),
@@ -330,7 +330,7 @@ impl Primary {
         let block_synchronizer_handle = BlockSynchronizer::spawn(
             name.clone(),
             (**committee.load()).clone(),
-            (**worker_cache.load()).clone(),
+            worker_cache.clone(),
             tx_reconfigure.subscribe(),
             rx_block_synchronizer_commands,
             rx_certificate_responses,
@@ -355,7 +355,7 @@ impl Primary {
         let header_waiter_handle = HeaderWaiter::spawn(
             name.clone(),
             (**committee.load()).clone(),
-            (**worker_cache.load()).clone(),
+            worker_cache.clone(),
             certificate_store.clone(),
             payload_store.clone(),
             tx_consensus_round_updates.subscribe(),
@@ -590,7 +590,7 @@ struct WorkerReceiverHandler {
     tx_batches: Sender<BatchResult>,
     tx_batch_removal: Sender<DeleteBatchResult>,
     tx_state_handler: Sender<ReconfigureNotification>,
-    our_workers: HashMap<WorkerId, WorkerInfo>,
+    our_workers: BTreeMap<WorkerId, WorkerInfo>,
     metrics: Arc<PrimaryMetrics>,
 }
 

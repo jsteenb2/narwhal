@@ -7,7 +7,7 @@ use crate::{
 };
 use blake2::{digest::Update, VarBlake2b};
 use bytes::Bytes;
-use config::{Committee, Epoch, WorkerCache, WorkerId, WorkerInfo};
+use config::{Committee, Epoch, SharedWorkerCache, WorkerId, WorkerInfo};
 use crypto::{
     traits::{EncodeDecodeBase64, Signer, VerifyingKey},
     Digest, Hash, PublicKey, Signature, SignatureService, Verifier, DIGEST_LEN,
@@ -18,10 +18,11 @@ use indexmap::IndexMap;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
     fmt,
     fmt::Formatter,
 };
+
 /// The round number.
 pub type Round = u64;
 
@@ -141,7 +142,7 @@ impl Header {
         }
     }
 
-    pub fn verify(&self, committee: &Committee, worker_cache: &WorkerCache) -> DagResult<()> {
+    pub fn verify(&self, committee: &Committee, worker_cache: SharedWorkerCache) -> DagResult<()> {
         // Ensure the header is from the correct epoch.
         ensure!(
             self.epoch == committee.epoch(),
@@ -164,6 +165,7 @@ impl Header {
         // Ensure all worker ids are correct.
         for worker_id in self.payload.values() {
             worker_cache
+                .load()
                 .worker(&self.author, worker_id)
                 .map_err(|_| DagError::MalformedHeader(self.id))?;
         }
@@ -377,7 +379,7 @@ impl Certificate {
             .collect()
     }
 
-    pub fn verify(&self, committee: &Committee, worker_cache: &WorkerCache) -> DagResult<()> {
+    pub fn verify(&self, committee: &Committee, worker_cache: SharedWorkerCache) -> DagResult<()> {
         // Ensure the header is from the correct epoch.
         ensure!(
             self.epoch() == committee.epoch(),
@@ -658,5 +660,5 @@ pub enum WorkerPrimaryError {
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct WorkerInfoResponse {
     /// Map of workers' id and their network addresses.
-    pub workers: HashMap<WorkerId, WorkerInfo>,
+    pub workers: BTreeMap<WorkerId, WorkerInfo>,
 }

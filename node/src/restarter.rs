@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{Node, NodeStorage};
 use arc_swap::ArcSwap;
-use config::{Committee, Parameters, WorkerCache};
+use config::{Committee, Parameters, SharedWorkerCache};
 use crypto::{traits::KeyPair as _, KeyPair};
 use executor::{ExecutionState, ExecutorOutput};
 use futures::future::join_all;
@@ -20,7 +20,7 @@ impl NodeRestarter {
     pub async fn watch<State>(
         keypair: KeyPair,
         committee: &Committee,
-        worker_cache: &WorkerCache,
+        worker_cache: SharedWorkerCache,
         storage_base_path: PathBuf,
         execution_state: Arc<State>,
         parameters: Parameters,
@@ -35,7 +35,6 @@ impl NodeRestarter {
         let mut keypair = keypair;
         let mut name = keypair.public().clone();
         let mut committee = committee.clone();
-        let worker_cache = worker_cache.clone();
 
         let mut task_managers = Vec::new();
         let mut primary_network = WorkerToPrimaryNetwork::default();
@@ -54,7 +53,7 @@ impl NodeRestarter {
             let primary = Node::spawn_primary(
                 keypair,
                 Arc::new(ArcSwap::new(Arc::new(committee.clone()))),
-                Arc::new(ArcSwap::new(Arc::new(worker_cache.clone()))),
+                worker_cache.clone(),
                 &store,
                 parameters.clone(),
                 /* consensus */ true,
@@ -69,7 +68,7 @@ impl NodeRestarter {
                 name.clone(),
                 /* worker_ids */ vec![0],
                 Arc::new(ArcSwap::new(Arc::new(committee.clone()))),
-                Arc::new(ArcSwap::new(Arc::new(worker_cache.clone()))),
+                worker_cache.clone(),
                 &store,
                 parameters.clone(),
                 registry,
@@ -94,6 +93,7 @@ impl NodeRestarter {
             let primary_cancel_handle = primary_network.send(address, &message).await;
 
             let addresses = worker_cache
+                .load()
                 .our_workers(&name)
                 .expect("Our key is not in the worker cache")
                 .into_iter()

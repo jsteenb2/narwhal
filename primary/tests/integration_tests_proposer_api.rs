@@ -18,7 +18,7 @@ use std::{
 };
 use test_utils::{
     keys, make_optimal_certificates, make_optimal_signed_certificates, pure_committee_from_keys,
-    temp_dir, worker_cache_from_keys,
+    shared_worker_cache_from_keys, temp_dir,
 };
 use tokio::sync::watch;
 use tonic::transport::Channel;
@@ -33,7 +33,7 @@ async fn test_rounds_errors() {
     let mut k = keys(None);
 
     let committee = pure_committee_from_keys(&k);
-    let worker_cache = worker_cache_from_keys(&k);
+    let worker_cache = shared_worker_cache_from_keys(&k);
     let keypair = k.pop().unwrap();
     let name = keypair.public().clone();
 
@@ -97,7 +97,7 @@ async fn test_rounds_errors() {
         name.clone(),
         keypair,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
-        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
+        worker_cache,
         parameters.clone(),
         store_primary.header_store,
         store_primary.certificate_store,
@@ -151,7 +151,7 @@ async fn test_rounds_return_successful_response() {
     let mut k = keys(None);
 
     let committee = pure_committee_from_keys(&k);
-    let worker_cache = worker_cache_from_keys(&k);
+    let worker_cache = shared_worker_cache_from_keys(&k);
 
     let keypair = k.pop().unwrap();
     let name = keypair.public().clone();
@@ -181,7 +181,7 @@ async fn test_rounds_return_successful_response() {
         name.clone(),
         keypair,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
-        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
+        worker_cache,
         parameters.clone(),
         store_primary.header_store,
         store_primary.certificate_store,
@@ -242,7 +242,7 @@ async fn test_node_read_causal_signed_certificates() {
     let mut k = keys(None);
 
     let committee = pure_committee_from_keys(&k);
-    let worker_cache = worker_cache_from_keys(&k);
+    let worker_cache = shared_worker_cache_from_keys(&k);
 
     // Make the data store.
     let primary_store_1 = NodeStorage::reopen(temp_dir());
@@ -331,7 +331,7 @@ async fn test_node_read_causal_signed_certificates() {
         name_1.clone(),
         keypair_1,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
-        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
+        worker_cache.clone(),
         primary_1_parameters.clone(),
         primary_store_1.header_store.clone(),
         primary_store_1.certificate_store.clone(),
@@ -370,7 +370,7 @@ async fn test_node_read_causal_signed_certificates() {
         name_2.clone(),
         keypair_2,
         Arc::new(ArcSwap::from_pointee(committee.clone())),
-        Arc::new(ArcSwap::from_pointee(worker_cache.clone())),
+        worker_cache.clone(),
         primary_2_parameters.clone(),
         primary_store_2.header_store,
         primary_store_2.certificate_store,
